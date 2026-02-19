@@ -57,6 +57,7 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 	const preventMenu = useRef(false);
 	const clickCnt = useRef(0);
 	const prevStyleRef = useRef(style);
+	const justAppliedPendingMarks = useRef(false);
 
 	useEffect(() => {
 		setValue(text);
@@ -765,6 +766,37 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 			focus.apply();
 		};
 
+		// Apply pending marks to just-typed character(s)
+		if (!keyboard.isSpecial(e) && !keyboard.withCommand(e)) {
+			const currentRange = focus.state.range;
+			
+			if (currentRange && (currentRange.from > 0)) {
+				const pendingMarks = focus.consumePendingMarks();
+
+				if (pendingMarks.size > 0) {
+					// Determine the range of the just-typed character(s)
+					// We assume the user typed 1 character, so the range is from cursor-1 to cursor
+					const charFrom = currentRange.from - 1;
+					const charTo = currentRange.from;
+
+					// Apply each pending mark to the just-typed character
+					pendingMarks.forEach(markType => {
+						marksRef.current = Mark.toggle(marksRef.current, {
+							type: markType,
+							param: '',
+							range: { from: charFrom, to: charTo },
+						});
+
+						// Re-arm the pending mark for continuous formatting
+						focus.togglePendingMark(markType);
+					});
+
+					// Set flag to prevent onSelect from clearing pending marks
+					justAppliedPendingMarks.current = true;
+				};
+			};
+		};
+
 		setText(marksRef.current, false);
 		onKeyUp(e, value, marksRef.current, range, props);
 
@@ -968,6 +1000,7 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 			placeholderHide();
 		};
 
+		focus.clearPendingMarks();
 		setText(marksRef.current, true);
 		focus.clear(true);
 		onBlur?.(e);
@@ -1076,6 +1109,19 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 		const value = getTextValue();
 
 		focus.set(block.id, range);
+
+		// Clear pending marks if:
+		// 1. There's an actual text selection (range.from != range.to), OR
+		// 2. Cursor moved but we didn't just apply pending marks (user clicked/arrow key)
+		const hasSelection = range && (range.from != range.to);
+		const userRepositioned = !justAppliedPendingMarks.current;
+		
+		if (hasSelection || userRepositioned) {
+			focus.clearPendingMarks();
+		};
+
+		// Reset the flag for next iteration
+		justAppliedPendingMarks.current = false;
 
 		if (readonly || S.Menu.isOpen('selectPasteUrl')) {
 			return;
