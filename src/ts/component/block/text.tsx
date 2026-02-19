@@ -1099,14 +1099,17 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 			return;
 		};
 
-		focus.clearPendingMarks();
-
 		const selection = S.Common.getRef('selectionProvider');
 		const ids = selection?.getForClick('', false, true);
 		const range = getRange();
 		const value = getTextValue();
 
 		focus.set(block.id, range);
+
+		// Only clear pending marks if there's an actual selection (not just cursor movement from typing)
+		if (range && (range.from != range.to)) {
+			focus.clearPendingMarks();
+		};
 
 		if (readonly || S.Menu.isOpen('selectPasteUrl')) {
 			return;
