@@ -57,6 +57,7 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 	const preventMenu = useRef(false);
 	const clickCnt = useRef(0);
 	const prevStyleRef = useRef(style);
+	const justAppliedPendingMarks = useRef(false);
 
 	useEffect(() => {
 		setValue(text);
@@ -789,6 +790,9 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 						// Re-arm the pending mark for continuous formatting
 						focus.togglePendingMark(markType);
 					});
+
+					// Set flag to prevent onSelect from clearing pending marks
+					justAppliedPendingMarks.current = true;
 				};
 			};
 		};
@@ -1106,10 +1110,18 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 
 		focus.set(block.id, range);
 
-		// Only clear pending marks if there's an actual selection (not just cursor movement from typing)
-		if (range && (range.from != range.to)) {
+		// Clear pending marks if:
+		// 1. There's an actual text selection (range.from != range.to), OR
+		// 2. Cursor moved but we didn't just apply pending marks (user clicked/arrow key)
+		const hasSelection = range && (range.from != range.to);
+		const userRepositioned = !justAppliedPendingMarks.current;
+		
+		if (hasSelection || userRepositioned) {
 			focus.clearPendingMarks();
 		};
+
+		// Reset the flag for next iteration
+		justAppliedPendingMarks.current = false;
 
 		if (readonly || S.Menu.isOpen('selectPasteUrl')) {
 			return;
