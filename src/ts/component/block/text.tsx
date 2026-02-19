@@ -766,26 +766,30 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 		};
 
 		// Apply pending marks to just-typed character(s)
-		if (!keyboard.isSpecial(e) && !keyboard.withCommand(e) && range && (range.from > 0)) {
-			const pendingMarks = focus.consumePendingMarks();
+		if (!keyboard.isSpecial(e) && !keyboard.withCommand(e)) {
+			const currentRange = focus.state.range;
+			
+			if (currentRange && (currentRange.from > 0)) {
+				const pendingMarks = focus.consumePendingMarks();
 
-			if (pendingMarks.size > 0) {
-				// Determine the range of the just-typed character(s)
-				// We assume the user typed 1 character, so the range is from cursor-1 to cursor
-				const charFrom = range.from - 1;
-				const charTo = range.from;
+				if (pendingMarks.size > 0) {
+					// Determine the range of the just-typed character(s)
+					// We assume the user typed 1 character, so the range is from cursor-1 to cursor
+					const charFrom = currentRange.from - 1;
+					const charTo = currentRange.from;
 
-				// Apply each pending mark to the just-typed character
-				pendingMarks.forEach(markType => {
-					marksRef.current = Mark.toggle(marksRef.current, {
-						type: markType,
-						param: '',
-						range: { from: charFrom, to: charTo },
+					// Apply each pending mark to the just-typed character
+					pendingMarks.forEach(markType => {
+						marksRef.current = Mark.toggle(marksRef.current, {
+							type: markType,
+							param: '',
+							range: { from: charFrom, to: charTo },
+						});
+
+						// Re-arm the pending mark for continuous formatting
+						focus.togglePendingMark(markType);
 					});
-
-					// Re-arm the pending mark for continuous formatting
-					focus.togglePendingMark(markType);
-				});
+				};
 			};
 		};
 
