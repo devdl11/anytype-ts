@@ -26,6 +26,8 @@ class Focus {
 		focused: '', 
 		range: { from: 0, to: 0 } 
 	};
+
+	pendingMarks: Set<I.MarkType> = new Set();
 	
 	/**
 	 * Sets the focus state to the given block and range.
@@ -72,6 +74,7 @@ class Focus {
 	 */
 	clear (withRange: boolean) {
 		this.clearRange(withRange);
+		this.clearPendingMarks();
 		this.state = { focused: '', range: { from: 0, to: 0 } };
 	};
 
@@ -193,6 +196,36 @@ class Focus {
 			container.scrollTop(Math.max(0, y - ch / 2));
 		};
 	};
+
+	/**
+	 * Toggles a pending mark. If the mark type is in the set, removes it. If not, adds it.
+	 * @param {I.MarkType} type - The mark type to toggle.
+	 */
+	togglePendingMark (type: I.MarkType) {
+		if (this.pendingMarks.has(type)) {
+			this.pendingMarks.delete(type);
+		} else {
+			this.pendingMarks.add(type);
+		};
+	};
+
+	/**
+	 * Consumes and returns the current pending marks, clearing the internal set.
+	 * @returns {Set<I.MarkType>} A copy of the pending marks.
+	 */
+	consumePendingMarks (): Set<I.MarkType> {
+		const marks = new Set(this.pendingMarks);
+		this.pendingMarks.clear();
+		return marks;
+	};
+
+	/**
+	 * Clears all pending marks without consuming them.
+	 */
+	clearPendingMarks () {
+		this.pendingMarks.clear();
+	};
+
 
 };
 

@@ -856,7 +856,7 @@ const EditorPage = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 		});
 
 		// Mark-up
-		if (block.canHaveMarks() && range.to && (range.from != range.to)) {
+		if (block.canHaveMarks() && range.to) {
 			let type = null;
 
 			for (const item of keyboard.getMarkParam()) {
@@ -866,7 +866,18 @@ const EditorPage = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 			};
 
 			if (type !== null) {
-				onMarkBlock(e, type, text, marks, '', range);
+				// Simple marks that support pending mode
+				const simplePendingMarks = [ I.MarkType.Bold, I.MarkType.Italic, I.MarkType.Strike, I.MarkType.Underline, I.MarkType.Code ];
+
+				if (range.from != range.to) {
+					// Text is selected - apply mark normally
+					onMarkBlock(e, type, text, marks, '', range);
+				} else
+				if (simplePendingMarks.includes(type)) {
+					// Collapsed cursor with simple mark - toggle pending mark
+					e.preventDefault();
+					focus.togglePendingMark(type);
+				};
 			};
 		};
 

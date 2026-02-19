@@ -765,6 +765,30 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 			focus.apply();
 		};
 
+		// Apply pending marks to just-typed character(s)
+		if (!keyboard.isSpecial(e) && !keyboard.withCommand(e) && range && (range.from > 0)) {
+			const pendingMarks = focus.consumePendingMarks();
+
+			if (pendingMarks.size > 0) {
+				// Determine the range of the just-typed character(s)
+				// We assume the user typed 1 character, so the range is from cursor-1 to cursor
+				const charFrom = range.from - 1;
+				const charTo = range.from;
+
+				// Apply each pending mark to the just-typed character
+				pendingMarks.forEach(markType => {
+					marksRef.current = Mark.toggle(marksRef.current, {
+						type: markType,
+						param: '',
+						range: { from: charFrom, to: charTo },
+					});
+
+					// Re-arm the pending mark for continuous formatting
+					focus.togglePendingMark(markType);
+				});
+			};
+		};
+
 		setText(marksRef.current, false);
 		onKeyUp(e, value, marksRef.current, range, props);
 
@@ -968,6 +992,7 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 			placeholderHide();
 		};
 
+		focus.clearPendingMarks();
 		setText(marksRef.current, true);
 		focus.clear(true);
 		onBlur?.(e);
@@ -1069,6 +1094,8 @@ const BlockText = observer(forwardRef<I.BlockRef, Props>((props, ref) => {
 		if (keyboard.isContextDisabled || keyboard.isComposition) {
 			return;
 		};
+
+		focus.clearPendingMarks();
 
 		const selection = S.Common.getRef('selectionProvider');
 		const ids = selection?.getForClick('', false, true);
